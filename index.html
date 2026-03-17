@@ -71,9 +71,27 @@
 }
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--body);font-family:var(--fb);overflow-x:hidden;cursor:none}
+a,button,input,select,textarea{cursor:none}
 
-#cursor{position:fixed;width:10px;height:10px;background:var(--cyan-lt);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s,height .18s,background .18s;box-shadow:0 0 12px var(--cyan-g)}
-#ring{position:fixed;width:34px;height:34px;border:1.5px solid var(--cyan-lt);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all .13s ease;opacity:.5}
+#cursor{
+  position:fixed;left:-100px;top:-100px;
+  width:10px;height:10px;
+  background:var(--cyan-lt);border-radius:50%;
+  pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);
+  transition:width .15s ease,height .15s ease,background .15s ease;
+  box-shadow:0 0 10px var(--cyan-g);
+  will-change:left,top;
+}
+#ring{
+  position:fixed;left:-100px;top:-100px;
+  width:34px;height:34px;
+  border:1.5px solid var(--cyan-lt);border-radius:50%;
+  pointer-events:none;z-index:9998;
+  transform:translate(-50%,-50%);
+  opacity:.45;
+  will-change:left,top;
+}
 
 /* subtle dot-pattern overlay */
 body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(0,122,114,.06) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0;opacity:.6}
@@ -878,51 +896,100 @@ footer{padding:60px 56px 40px;border-top:1px solid var(--border-soft);background
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-/* ─────────────────────────────────────────────
-   FORMSPREE SETUP
-   ─────────────────────────────────────────────
-   1. Go to https://formspree.io and create a free account
-   2. Click "New Form" — name it "LeadSite Contact"
-   3. Copy your form endpoint — it looks like:
-         https://formspree.io/f/xyzabcde
-   4. Paste it below, replacing YOUR_FORMSPREE_ENDPOINT
-   ───────────────────────────────────────────── */
+<script>
+/* ── FORMSPREE ── */
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mnjggrkk';
 
-/* CURSOR */
-const C=document.getElementById('cursor'),R=document.getElementById('ring');
-let mx=0,my=0,rx=0,ry=0;
-document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
-(function t(){C.style.left=mx+'px';C.style.top=my+'px';rx+=(mx-rx)*.11;ry+=(my-ry)*.11;R.style.left=rx+'px';R.style.top=ry+'px';requestAnimationFrame(t)})();
-document.querySelectorAll('a,button,.scard,.witem,.tcard,.spcard,.fitem').forEach(el=>{
-  el.addEventListener('mouseenter',()=>{C.style.width='18px';C.style.height='18px';C.style.background='var(--volt-lt)';R.style.width='48px';R.style.height='48px'});
-  el.addEventListener('mouseleave',()=>{C.style.width='10px';C.style.height='10px';C.style.background='var(--cyan-lt)';R.style.width='34px';R.style.height='34px'});
+/* ── CURSOR ── */
+const CUR = document.getElementById('cursor');
+const RNG = document.getElementById('ring');
+let mouseX = -100, mouseY = -100;
+let ringX  = -100, ringY  = -100;
+let hovering = false;
+
+document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+
+document.addEventListener('mouseleave', () => { CUR.style.opacity = '0'; RNG.style.opacity = '0'; });
+document.addEventListener('mouseenter', () => { CUR.style.opacity = '1'; RNG.style.opacity = hovering ? '0.7' : '0.45'; });
+
+// Dot — snaps directly to mouse each frame
+(function tickDot() {
+  CUR.style.left = mouseX + 'px';
+  CUR.style.top  = mouseY + 'px';
+  requestAnimationFrame(tickDot);
+})();
+
+// Ring — lerps behind mouse for smooth lag
+(function tickRing() {
+  ringX += (mouseX - ringX) * 0.10;
+  ringY += (mouseY - ringY) * 0.10;
+  RNG.style.left = ringX + 'px';
+  RNG.style.top  = ringY + 'px';
+  requestAnimationFrame(tickRing);
+})();
+
+// Hover expand via event delegation (works for all elements including dynamic ones)
+const HOVER_SEL = 'a, button, .scard, .witem, .tcard, .spcard, .fitem, .sarrow, .ncta, .fbtn, .splink';
+document.body.addEventListener('mouseover', e => {
+  if (e.target.closest(HOVER_SEL)) {
+    hovering = true;
+    CUR.style.width       = '18px';
+    CUR.style.height      = '18px';
+    CUR.style.background  = 'var(--volt-lt)';
+    RNG.style.opacity     = '0.7';
+    RNG.style.width       = '48px';
+    RNG.style.height      = '48px';
+    RNG.style.borderColor = 'var(--volt-lt)';
+  }
+});
+document.body.addEventListener('mouseout', e => {
+  if (e.target.closest(HOVER_SEL)) {
+    hovering = false;
+    CUR.style.width       = '10px';
+    CUR.style.height      = '10px';
+    CUR.style.background  = 'var(--cyan-lt)';
+    RNG.style.opacity     = '0.45';
+    RNG.style.width       = '34px';
+    RNG.style.height      = '34px';
+    RNG.style.borderColor = 'var(--cyan-lt)';
+  }
 });
 
-/* NAV */
-const nav=document.getElementById('nav');
-window.addEventListener('scroll',()=>nav.classList.toggle('sc',scrollY>40));
+/* ── NAV SCROLL ── */
+const NAV = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  NAV.classList.toggle('sc', window.scrollY > 40);
+}, { passive: true });
 
-/* REVEAL */
-const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')})},{threshold:.1});
-document.querySelectorAll('.rv').forEach(el=>obs.observe(el));
+/* ── SCROLL REVEAL ── */
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('vis'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.rv').forEach(el => revealObs.observe(el));
 
-/* FAQ */
-function toggleFaq(item){
-  const o=item.classList.contains('open');
-  document.querySelectorAll('.fitem').forEach(i=>i.classList.remove('open'));
-  if(!o)item.classList.add('open');
+/* ── FAQ ACCORDION ── */
+function toggleFaq(item) {
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.fitem').forEach(i => i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
 }
 
-/* MODAL */
-function openModal(){document.getElementById('modal').classList.add('open');document.body.style.overflow='hidden';}
-function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
-function hoc(e){if(e.target===document.getElementById('modal'))closeModal();}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+/* ── MODAL ── */
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function hoc(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-/* FORM SUBMIT */
-async function submitForm(){
+/* ── FORM SUBMIT ── */
+async function submitForm() {
   const first   = document.getElementById('f-first').value.trim();
   const last    = document.getElementById('f-last').value.trim();
   const email   = document.getElementById('f-email').value.trim();
@@ -930,14 +997,12 @@ async function submitForm(){
   const message = document.getElementById('f-message').value.trim();
   const errBox  = document.getElementById('f-error');
 
-  // Basic validation
-  if(!first || !last || !email || !service || !message){
+  if (!first || !last || !email || !service || !message) {
     errBox.style.display = 'block';
     return;
   }
   errBox.style.display = 'none';
 
-  // Loading state
   const btn = document.getElementById('f-submit');
   document.getElementById('f-btn-text').style.display    = 'none';
   document.getElementById('f-btn-loading').style.display = 'inline';
@@ -945,40 +1010,34 @@ async function submitForm(){
 
   try {
     const res = await fetch(FORMSPREE_ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json', 'Accept':'application/json'},
-      body: JSON.stringify({
-        first_name: first,
-        last_name:  last,
-        email:      email,
-        service:    service,
-        message:    message
-      })
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ first_name: first, last_name: last, email, service, message })
     });
-
-    if(res.ok){
-      // Success
+    if (res.ok) {
       document.getElementById('formContent').style.display = 'none';
       document.getElementById('formSuccess').classList.add('show');
-      setTimeout(()=>{
-        closeModal();
-        setTimeout(resetForm, 400);
-      }, 3200);
+      setTimeout(() => { closeModal(); setTimeout(resetForm, 400); }, 3200);
     } else {
-      throw new Error('Server error');
+      throw new Error('non-ok');
     }
-  } catch(err){
-    // Show error panel
+  } catch (err) {
     document.getElementById('formContent').style.display = 'none';
     document.getElementById('formError').classList.add('show');
   }
 }
 
-function resetForm(){
-  document.getElementById('formContent').style.display  = '';
+function resetForm() {
+  document.getElementById('formContent').style.display = '';
   document.getElementById('formSuccess').classList.remove('show');
   document.getElementById('formError').classList.remove('show');
-  document.getElementById('f-first').value   = '';
-  document.getElementById('f-last').value    = '';
-  document.getElementById('f-email').value   = '';
-  document.getElement
+  ['f-first','f-last','f-email','f-message'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-service').value             = '';
+  document.getElementById('f-error').style.display       = 'none';
+  document.getElementById('f-btn-text').style.display    = 'inline';
+  document.getElementById('f-btn-loading').style.display = 'none';
+  document.getElementById('f-submit').disabled           = false;
+}
+</script>
+</body>
+</html>
